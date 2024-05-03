@@ -15,11 +15,13 @@ namespace JwtTutorial.Services
     {
         private DataContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public AuthService(DataContext context, IConfiguration configuration)
+        public AuthService(DataContext context, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
             _configuration = configuration;
+            _httpContextAccessor = httpContextAccessor;
         }
         public async Task<ActionResult<ServiceResponse<string>>> Login(UserDTO userDTO)
         {
@@ -73,6 +75,20 @@ namespace JwtTutorial.Services
                 Data = user,
                 Message = "Register Successfully"
             };
+        }
+        public object GetInfoByClaim()
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null)
+            {
+                return null;
+            }
+            var result = new
+            {
+                Name = httpContext.User.FindFirstValue(ClaimTypes.Name),
+                Role = httpContext.User.FindFirstValue(ClaimTypes.Role)
+            };
+            return result;
         }
         private void CreatePasswordHash(string password,out byte[] passwordHash,out byte[] passwordSalt)
         {

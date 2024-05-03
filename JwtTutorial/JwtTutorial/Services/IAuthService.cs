@@ -9,5 +9,6 @@ namespace JwtTutorial.Services
     {
         Task<ActionResult<ServiceResponse<User>>> Register(UserDTO userDTO);
         Task<ActionResult<ServiceResponse<string>>> Login(UserDTO userDTO);
+        object GetInfoByClaim();
     }
 }

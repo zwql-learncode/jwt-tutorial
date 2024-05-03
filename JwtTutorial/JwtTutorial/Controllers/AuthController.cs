@@ -2,6 +2,7 @@
 using JwtTutorial.Entities;
 using JwtTutorial.Models;
 using JwtTutorial.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,6 +37,13 @@ namespace JwtTutorial.Controllers
             {
                 return BadRequest(res);
             }
+            return Ok(res);
+        }
+        [Authorize]
+        [HttpGet]
+        public ActionResult<object> GetInfoByClaim()
+        {
+            var res = _authService.GetInfoByClaim();
             return Ok(res);
         }
     }
