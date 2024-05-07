@@ -46,5 +46,18 @@ namespace JwtTutorial.Controllers
             var res = _authService.GetInfoByClaim();
             return Ok(res);
         }
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<ServiceResponse<string>>> RefreshToken()
+        {
+            var username = Request.Cookies["username"];
+            var refreshToken = Request.Cookies["refreshToken"];
+            var actionResult = await _authService.CheckRefreshToken(username, refreshToken);
+            var res = actionResult.Value;
+            if (!res.Success)
+            {
+                return BadRequest(res);
+            }
+            return Ok(res);
+        }
     }
 }

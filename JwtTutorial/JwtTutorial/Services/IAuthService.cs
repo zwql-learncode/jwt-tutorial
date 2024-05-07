@@ -10,5 +10,6 @@ namespace JwtTutorial.Services
         Task<ActionResult<ServiceResponse<User>>> Register(UserDTO userDTO);
         Task<ActionResult<ServiceResponse<string>>> Login(UserDTO userDTO);
         object GetInfoByClaim();
+        Task<ActionResult<ServiceResponse<string>>> CheckRefreshToken(string username, string refreshToken);
     }
 }

@@ -5,6 +5,7 @@ using JwtTutorial.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.ComponentModel;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -42,9 +43,15 @@ namespace JwtTutorial.Services
                     Message = "Password is not correct!"
                 };
             }
+
+            var token = GenetareToken(user);
+
+            var refreshToken = GenerateRefreshToken();
+            SetRefreshToken(user, refreshToken);
+
             return new ServiceResponse<string>()
             {
-                Data = GenetareToken(user),
+                Data = token,
                 Message = "Login Successfully"
             };
         }
@@ -90,6 +97,46 @@ namespace JwtTutorial.Services
             };
             return result;
         }
+
+        public async Task<ActionResult<ServiceResponse<string>>> CheckRefreshToken(string username, string refreshToken)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if(user == null)
+            {
+                return new ServiceResponse<string>()
+                {
+                    Success = false,
+                    Message = "Invalid Refresh Token!"
+                };
+            }
+            if(!user.RefreshToken.Equals(refreshToken) || refreshToken == null)
+            {
+                return new ServiceResponse<string>()
+                {
+                    Success = false,
+                    Message = "Invalid Refresh Token!"
+                };
+            }
+            else if(user.TokenExpries < DateTime.Now)
+            {
+                return new ServiceResponse<string>()
+                {
+                    Success = false,
+                    Message = "Token expired!"
+                };
+            }
+            else
+            {
+                string token = GenetareToken(user);
+                var newRefreshToken = GenerateRefreshToken();
+                SetRefreshToken(user, newRefreshToken);
+
+                return new ServiceResponse<string>()
+                {
+                    Data = token
+                };
+            }
+        }
         private void CreatePasswordHash(string password,out byte[] passwordHash,out byte[] passwordSalt)
         {
             var hmac = new HMACSHA512();
@@ -125,6 +172,37 @@ namespace JwtTutorial.Services
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
 
             return jwt;
+        }
+
+        private RefreshToken GenerateRefreshToken() 
+        {
+            var refreshToken = new RefreshToken()
+            {
+                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
+                Expries = DateTime.Now.AddDays(7),
+                Created = DateTime.Now
+            };
+            return refreshToken;
+        }
+
+        private async Task SetRefreshToken(User user, RefreshToken newRefreshToken)
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            var cookies = httpContext.Response.Cookies;
+
+            var cookieOptions = new CookieOptions()
+            {
+                HttpOnly = true,
+                Expires = newRefreshToken.Expries
+            };
+
+            cookies.Append("username", user.Username, cookieOptions);
+            cookies.Append("refreshToken", newRefreshToken.Token, cookieOptions);
+
+            user.RefreshToken = newRefreshToken.Token;
+            user.TokenCreated = newRefreshToken.Created;
+            user.TokenExpries = newRefreshToken.Expries;
+            await _context.SaveChangesAsync();
         }
     }
 }
